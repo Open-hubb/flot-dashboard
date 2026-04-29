@@ -67,8 +67,9 @@ function ProfileSection({ merchant }: { merchant: Merchant }) {
           <Input id="name" name="name" defaultValue={merchant.name} required />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="businessName">Business Name</Label>
-          <Input id="businessName" name="businessName" defaultValue={merchant.businessName} required />
+          <Label>Business Name</Label>
+          <Input value={merchant.businessName} disabled />
+          <p className="text-xs text-muted-foreground">Business name cannot be changed. Contact Flot support.</p>
         </div>
         <div className="space-y-1.5">
           <Label>Email</Label>
