@@ -59,14 +59,14 @@ async function getOverviewData(merchantId: string) {
   const trendPct =
     lastRevenue > 0 ? (((currentRevenue - lastRevenue) / lastRevenue) * 100).toFixed(1) : null
 
-  return { allOrders, recentOrders, chartData, trendPct, currentRevenue }
+  return { allOrders, recentOrders, chartData, trendPct, currentRevenue, last30DaysOrders }
 }
 
 export default async function OverviewPage() {
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
 
-  const { allOrders, recentOrders, chartData, trendPct, currentRevenue } =
+  const { allOrders, recentOrders, chartData, last30DaysOrders } =
     await getOverviewData(session.user.id)
 
   const pendingCount = await db.order.count({
