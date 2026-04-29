@@ -3,11 +3,19 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import { Loader2, Mail, Trash2, Copy, Check, Webhook } from "lucide-react"
+import { Loader2, Mail, Trash2, Copy, Check, Link as LinkIcon, KeyRound } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 
 const APP_URL = "https://flot-dashboard.vercel.app"
 
-function CopyRow({ label, value }: { label: string; value: string }) {
+function CopyField({ label, value, mono = true }: { label: string; value: string; mono?: boolean }) {
   const [copied, setCopied] = useState(false)
   function copy() {
     navigator.clipboard.writeText(value)
@@ -15,12 +23,19 @@ function CopyRow({ label, value }: { label: string; value: string }) {
     setTimeout(() => setCopied(false), 2000)
   }
   return (
-    <div className="flex items-center justify-between gap-4 py-1.5">
-      <span className="text-xs text-muted-foreground w-20 shrink-0">{label}</span>
-      <span className="text-xs font-mono truncate flex-1">{value || "—"}</span>
-      <button onClick={copy} className="shrink-0 text-muted-foreground hover:text-foreground">
-        {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-      </button>
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
+        <span className={`flex-1 text-sm truncate ${mono ? "font-mono" : ""}`}>{value || "—"}</span>
+        <button
+          onClick={copy}
+          className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          {copied
+            ? <Check className="h-3.5 w-3.5 text-green-500" />
+            : <Copy className="h-3.5 w-3.5" />}
+        </button>
+      </div>
     </div>
   )
 }
@@ -38,29 +53,36 @@ export function WebhookCredentialsButton({
   const webhookUrl = `${APP_URL}/api/webhooks/flot/${flotMerchantId}`
 
   return (
-    <div className="relative">
-      <Button variant="outline" size="sm" onClick={() => setOpen((o) => !o)}>
-        <Webhook className="h-3.5 w-3.5" />
-        <span className="ml-1.5">Webhook</span>
-      </Button>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+      >
+        <KeyRound className="h-3.5 w-3.5" />
+        Webhook
+      </button>
 
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-9 z-50 w-80 rounded-xl border bg-card p-4 shadow-lg">
-            <p className="text-sm font-semibold mb-3">Webhook Credentials</p>
-            <div className="divide-y border rounded-lg px-3">
-              <CopyRow label="URL" value={webhookUrl} />
-              <CopyRow label="Username" value={username} />
-              <CopyRow label="Password" value={password} />
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Provide these to Flot staff when registering the webhook.
-            </p>
-          </div>
-        </>
-      )}
-    </div>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Webhook Setup</DialogTitle>
+          <DialogDescription>
+            Provide these credentials to Flot staff when registering this merchant&apos;s webhook.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 py-1">
+          <CopyField label="Endpoint URL" value={webhookUrl} />
+          <CopyField label="Username" value={username} />
+          <CopyField label="Password" value={password} />
+        </div>
+
+        <div className="rounded-lg bg-muted/50 px-3 py-2.5 text-xs text-muted-foreground">
+          Flot will POST to this URL with Basic Auth on every payment event.
+        </div>
+
+        <DialogFooter showCloseButton />
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -122,7 +144,9 @@ export function DeleteMerchantButton({
 
   return (
     <Button variant="ghost" size="sm" onClick={handleDelete} disabled={loading}>
-      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 text-destructive" />}
+      {loading
+        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        : <Trash2 className="h-3.5 w-3.5 text-destructive" />}
     </Button>
   )
 }

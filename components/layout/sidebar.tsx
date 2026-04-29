@@ -25,13 +25,14 @@ interface NavItem {
   href: string
   icon: React.ElementType
   websiteOnly?: boolean
+  qrOnly?: boolean
 }
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Overview", href: "/", icon: LayoutDashboard },
   { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
-  { label: "QR Code", href: "/qr-code", icon: QrCode },
+  { label: "QR Code", href: "/qr-code", icon: QrCode, qrOnly: true },
   { label: "Payouts", href: "/payouts", icon: Wallet },
   { label: "Customers", href: "/customers", icon: Users },
   { label: "Orders", href: "/orders", icon: ShoppingBag, websiteOnly: true },
@@ -51,7 +52,11 @@ export function Sidebar({ merchantType, businessName }: SidebarProps) {
   const pathname = usePathname()
   const isWebsite = merchantType === "WEBSITE"
 
-  const visibleItems = NAV_ITEMS.filter((item) => !item.websiteOnly || isWebsite)
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.websiteOnly && !isWebsite) return false
+    if (item.qrOnly && isWebsite) return false
+    return true
+  })
 
   return (
     <aside className="flex h-screen w-60 flex-col bg-sidebar text-sidebar-foreground">
