@@ -1,53 +1,28 @@
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { redirect } from "next/navigation"
-import { formatCurrency } from "@/lib/format"
-import { Wallet, Mail, AlertCircle } from "lucide-react"
+import { CheckCircle2, Mail, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default async function PayoutsPage() {
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
 
-  const [completed, pending] = await Promise.all([
-    db.order.aggregate({
-      where: { merchantId: session.user.id, status: "COMPLETED" },
-      _sum: { amount: true },
-    }),
-    db.order.aggregate({
-      where: { merchantId: session.user.id, status: "PENDING" },
-      _sum: { amount: true },
-    }),
-  ])
-
-  const totalRevenue = Number(completed._sum.amount ?? 0)
-  const pendingRevenue = Number(pending._sum.amount ?? 0)
+  const completedCount = await db.order.count({
+    where: { merchantId: session.user.id, status: "COMPLETED" },
+  })
 
   return (
     <div className="space-y-6 max-w-2xl">
-      {/* Balance cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-              <Wallet className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Earned</p>
-              <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
-            </div>
+      {/* Completed payments stat */}
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10">
+            <CheckCircle2 className="h-5 w-5 text-green-500" />
           </div>
-        </div>
-
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10">
-              <Wallet className="h-5 w-5 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Pending Payments</p>
-              <p className="text-2xl font-bold">{formatCurrency(pendingRevenue)}</p>
-            </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Completed Payments</p>
+            <p className="text-2xl font-bold">{completedCount.toLocaleString()}</p>
           </div>
         </div>
       </div>

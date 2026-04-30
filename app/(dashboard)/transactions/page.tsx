@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { redirect } from "next/navigation"
-import { formatCurrency, formatDateTime } from "@/lib/format"
+import { formatDateTime } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"
 import {
   Table,
@@ -89,16 +89,15 @@ export default async function TransactionsPage({
           <TableHeader>
             <TableRow>
               <TableHead>Order ID</TableHead>
+              <TableHead>Flot Request ID</TableHead>
               <TableHead>Date</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Type</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-16 text-center text-muted-foreground">
+                <TableCell colSpan={4} className="py-16 text-center text-muted-foreground">
                   No transactions found.
                 </TableCell>
               </TableRow>
@@ -106,16 +105,11 @@ export default async function TransactionsPage({
               orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="font-mono text-sm font-medium">{order.orderId}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {order.flotRequestId ?? "—"}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDateTime(order.receivedAt)}
-                  </TableCell>
-                  <TableCell className="font-semibold">
-                    {order.amount
-                      ? formatCurrency(Number(order.amount), order.currency ?? "SLE")
-                      : "—"}
-                  </TableCell>
-                  <TableCell className="text-sm capitalize text-muted-foreground">
-                    {order.paymentType ?? "—"}
                   </TableCell>
                   <TableCell>
                     <Badge variant={BADGE_VARIANT[order.status]}>

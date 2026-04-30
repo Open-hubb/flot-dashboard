@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { redirect } from "next/navigation"
-import { formatCurrency, formatDateTime } from "@/lib/format"
+import { formatDateTime } from "@/lib/format"
 import { Users, TrendingUp, RepeatIcon } from "lucide-react"
 import { subDays } from "date-fns"
 
@@ -27,7 +27,7 @@ export default async function CustomersPage() {
     where: { merchantId: session.user.id, status: "COMPLETED" },
     orderBy: { receivedAt: "desc" },
     take: 20,
-    select: { orderId: true, amount: true, currency: true, receivedAt: true, paymentType: true },
+    select: { orderId: true, flotRequestId: true, receivedAt: true },
   })
 
   return (
@@ -92,17 +92,8 @@ export default async function CustomersPage() {
           ) : (
             recentOrders.map((order) => (
               <div key={order.orderId} className="flex items-center justify-between px-6 py-3">
-                <div>
-                  <p className="text-sm font-medium font-mono">{order.orderId}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDateTime(order.receivedAt)} · {order.paymentType ?? "QR"}
-                  </p>
-                </div>
-                <p className="text-sm font-semibold">
-                  {order.amount
-                    ? formatCurrency(Number(order.amount), order.currency ?? "SLE")
-                    : "—"}
-                </p>
+                <p className="text-sm font-medium font-mono">{order.orderId}</p>
+                <p className="text-xs text-muted-foreground">{formatDateTime(order.receivedAt)}</p>
               </div>
             ))
           )}
