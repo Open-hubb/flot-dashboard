@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { redirect } from "next/navigation"
-import { formatCurrency, formatDateTime } from "@/lib/format"
+import { formatDateTime } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"
 import {
   Table,
@@ -15,14 +15,19 @@ import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
 import { ChevronLeft, ChevronRight, Lock } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { OrderStatus } from "@prisma/client"
+import type { CustomerOrderStatus } from "@prisma/client"
 
 const PAGE_SIZE = 20
-const BADGE_VARIANT: Record<OrderStatus, "default" | "secondary" | "destructive"> = {
-  COMPLETED: "default",
+
+const STATUS_FILTERS = ["", "PAID", "PENDING"] as const
+
+const BADGE_VARIANT: Record<CustomerOrderStatus, "default" | "secondary" | "destructive"> = {
+  PAID: "default",
   PENDING: "secondary",
-  FAILED: "destructive",
+  CANCELLED: "destructive",
 }
+
+type OrderItem = { name: string; size: string; qty: number; price: number }
 
 export default async function OrdersPage({
   searchParams,
@@ -36,6 +41,7 @@ export default async function OrdersPage({
     where: { id: session.user.id },
     select: { type: true },
   })
+
   if (merchant?.type !== "WEBSITE") {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -51,29 +57,30 @@ export default async function OrdersPage({
   const page = Math.max(1, parseInt(searchParams.page ?? "1"))
   const rawStatus = searchParams.status ?? ""
   const status =
-    rawStatus && ["COMPLETED", "PENDING", "FAILED"].includes(rawStatus)
-      ? (rawStatus as OrderStatus)
+    rawStatus && ["PAID", "PENDING", "CANCELLED"].includes(rawStatus)
+      ? (rawStatus as CustomerOrderStatus)
       : undefined
 
   const where = { merchantId: session.user.id, ...(status ? { status } : {}) }
+
   const [orders, total] = await Promise.all([
-    db.order.findMany({
+    db.customerOrder.findMany({
       where,
-      orderBy: { receivedAt: "desc" },
+      orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
-    db.order.count({ where }),
+    db.customerOrder.count({ where }),
   ])
-  const totalPages = Math.ceil(total / PAGE_SIZE)
 
+  const totalPages = Math.ceil(total / PAGE_SIZE)
   const filterHref = (s: string) => (s ? `/orders?status=${s}` : "/orders")
   const pageHref = (p: number) => `/orders?page=${p}${status ? `&status=${status}` : ""}`
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        {(["", "COMPLETED", "PENDING", "FAILED"] as const).map((s) => (
+        {STATUS_FILTERS.map((s) => (
           <Link
             key={s || "all"}
             href={filterHref(s)}
@@ -90,46 +97,56 @@ export default async function OrdersPage({
         <span className="ml-auto text-sm text-muted-foreground">{total} orders</span>
       </div>
 
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-        <Table>
+      <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
+        <Table className="min-w-[800px]">
           <TableHeader>
             <TableRow>
-              <TableHead>Order ID</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Address</TableHead>
+              <TableHead>Items</TableHead>
+              <TableHead>Total</TableHead>
               <TableHead>Date</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Payment Type</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-16 text-center text-muted-foreground">
-                  No orders found.
+                <TableCell colSpan={7} className="py-16 text-center text-muted-foreground">
+                  No orders yet. Orders will appear here when customers place them on your website.
                 </TableCell>
               </TableRow>
             ) : (
-              orders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-mono text-sm font-medium">{order.orderId}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatDateTime(order.receivedAt)}
-                  </TableCell>
-                  <TableCell className="font-semibold">
-                    {order.amount
-                      ? formatCurrency(Number(order.amount), order.currency ?? "SLE")
-                      : "—"}
-                  </TableCell>
-                  <TableCell className="text-sm capitalize text-muted-foreground">
-                    {order.paymentType ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={BADGE_VARIANT[order.status]}>
-                      {order.status.toLowerCase()}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))
+              orders.map((order) => {
+                const items = order.items as OrderItem[]
+                const itemSummary = items
+                  .map((i) => `${i.name} (${i.size}) ×${i.qty}`)
+                  .join(", ")
+                return (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-medium">{order.name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{order.phone}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-[180px] truncate">
+                      {order.address}, {order.city}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-[200px]">
+                      <span title={itemSummary} className="line-clamp-2">{itemSummary}</span>
+                    </TableCell>
+                    <TableCell className="font-semibold">
+                      {order.currency} {Number(order.total).toFixed(0)}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                      {formatDateTime(order.createdAt)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={BADGE_VARIANT[order.status]}>
+                        {order.status.toLowerCase()}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             )}
           </TableBody>
         </Table>
@@ -137,9 +154,7 @@ export default async function OrdersPage({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
-          </p>
+          <p className="text-sm text-muted-foreground">Page {page} of {totalPages}</p>
           <div className="flex gap-2">
             {page > 1 ? (
               <Link href={pageHref(page - 1)} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>

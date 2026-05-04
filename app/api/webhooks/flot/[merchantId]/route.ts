@@ -47,6 +47,24 @@ export async function POST(
         rawPayload: body,
       },
     })
+
+    // Link to the most recent unmatched customer order from this merchant (within 30 min)
+    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000)
+    const pendingCustomerOrder = await db.customerOrder.findFirst({
+      where: {
+        merchantId: merchant.id,
+        flotRequestId: null,
+        status: "PENDING",
+        createdAt: { gte: thirtyMinAgo },
+      },
+      orderBy: { createdAt: "desc" },
+    })
+    if (pendingCustomerOrder) {
+      await db.customerOrder.update({
+        where: { id: pendingCustomerOrder.id },
+        data: { flotRequestId, status: "PAID" },
+      })
+    }
   } else {
     // failed = customer can retry, leave as PENDING
     await db.order.upsert({

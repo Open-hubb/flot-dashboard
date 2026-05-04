@@ -24,6 +24,7 @@ model Merchant {
   updatedAt       DateTime  @updatedAt
 
   orders              Order[]
+  customerOrders      CustomerOrder[]
   notifications       InAppNotification[]
   notifPrefs          NotificationPrefs?
   analyticsEvents     WebsiteAnalyticsEvent[]
@@ -84,10 +85,37 @@ model WebsiteAnalyticsEvent {
   @@index([merchantId, createdAt])
 }
 
+// Submitted by merchant websites before the customer pays via Flot.
+// Auto-linked to an Order when the Flot webhook arrives.
+model CustomerOrder {
+  id            String              @id @default(cuid())
+  merchantId    String
+  merchant      Merchant            @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  name          String
+  phone         String
+  address       String
+  city          String
+  items         Json
+  total         Decimal             @db.Decimal(18, 2)
+  currency      String              @default("NLE")
+  flotRequestId String?             @unique
+  status        CustomerOrderStatus @default(PENDING)
+  createdAt     DateTime            @default(now())
+
+  @@index([merchantId, createdAt])
+  @@index([status])
+}
+
 enum OrderStatus {
   PENDING
   COMPLETED
   FAILED
+}
+
+enum CustomerOrderStatus {
+  PENDING
+  PAID
+  CANCELLED
 }
 
 enum MerchantType {
