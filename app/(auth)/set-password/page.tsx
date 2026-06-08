@@ -76,7 +76,7 @@ function SetPasswordContent() {
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
                 <div className="space-y-1.5">
                   <Label htmlFor="password">New password</Label>
                   <Input
@@ -86,6 +86,9 @@ function SetPasswordContent() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    autoComplete="off"
+                    data-1p-ignore
+                    data-lpignore="true"
                   />
                 </div>
 
@@ -98,6 +101,9 @@ function SetPasswordContent() {
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
                     required
+                    autoComplete="off"
+                    data-1p-ignore
+                    data-lpignore="true"
                   />
                 </div>
 
