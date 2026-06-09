@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAdminCookieValue, ADMIN_COOKIE } from "@/lib/admin-auth"
+import { safeEqual } from "@/lib/crypto"
 
 const COOKIE_OPTS = {
   httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
   sameSite: "lax" as const,
   path: "/",
   maxAge: 60 * 60 * 24 * 7, // 7 days
@@ -15,7 +17,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "ADMIN_SECRET not configured" }, { status: 500 })
   }
 
-  if (password !== process.env.ADMIN_SECRET) {
+  if (!safeEqual(String(password ?? ""), process.env.ADMIN_SECRET)) {
     return NextResponse.json({ error: "Incorrect password" }, { status: 401 })
   }
 
