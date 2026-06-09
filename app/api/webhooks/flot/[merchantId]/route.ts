@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { Resend } from "resend"
 import { z } from "zod"
+import { safeEqual } from "@/lib/crypto"
 
 const payloadSchema = z.object({
   orderId: z.string(),
@@ -20,10 +21,15 @@ export async function POST(
 
   if (!merchant) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  // Verify Basic Auth sent by Flot backend
+  // Verify Basic Auth sent by Flot backend. Fail CLOSED: if credentials
+  // aren't configured for this merchant, reject — never accept unauthenticated
+  // payment events (which would let anyone forge "completed" orders).
+  if (!merchant.webhookUsername || !merchant.webhookPassword) {
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 401 })
+  }
   const authHeader = req.headers.get("authorization") ?? ""
   const expected = `Basic ${Buffer.from(`${merchant.webhookUsername}:${merchant.webhookPassword}`).toString("base64")}`
-  if (merchant.webhookUsername && authHeader !== expected) {
+  if (!safeEqual(authHeader, expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
